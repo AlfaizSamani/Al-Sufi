@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import { useOrderNotifications } from "./hooks/useOrderNotifications";
 import { useAdminNotifications } from "./hooks/useAdminNotifications";
 import { useAnalyticsTracker } from "./hooks/useAnalytics";
+import BrandingManager from "./components/BrandingManager";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <BrandingManager />
             <OrderNotifier />
             <CartDrawer />
             <Routes>
