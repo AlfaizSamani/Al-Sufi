@@ -1,0 +1,50 @@
+name: Deploy Supabase to Azure VM
+
+on:
+  push:
+    paths:
+      - 'supabase/docker/**'
+      - '.github/workflows/deploy-supabase.yml'
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy files to Azure VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.AZURE_VM_IP }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          source: "supabase/docker/*"
+          target: "~/supabase-deploy"
+          strip_components: 2
+
+      - name: Deploy via SSH
+          # This pulls the latest images and restarts the containers on the VM
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_IP }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            cd ~/supabase-deploy
+            
+            # Create the .env file from secrets
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" > .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "ANON_KEY=${{ secrets.ANON_KEY }}" >> .env
+            echo "SERVICE_ROLE_KEY=${{ secrets.SERVICE_ROLE_KEY }}" >> .env
+            echo "SITE_URL=${{ secrets.SITE_URL }}" >> .env
+            echo "KONG_HTTP_PORT=80" >> .env
+            echo "KONG_HTTPS_PORT=443" >> .env
+            echo "POSTGRES_PORT=5432" >> .env
+            echo "STUDIO_PORT=3000" >> .env
+            
+            # Run docker compose
+            sudo docker compose pull
+            sudo docker compose up -d
