@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -128,10 +128,7 @@ const MyAccount = () => {
     },
   });
 
-  if (!user) {
-    navigate("/auth");
-    return null;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
 
   const startEditProfile = () => {
     setProfileForm({
