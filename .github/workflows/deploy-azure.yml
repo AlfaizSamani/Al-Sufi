@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  AZURE_WEBAPP_NAME: al-sufi-connect   # Your Azure Web App name
+  AZURE_WEBAPP_NAME: tesst   # Your Azure Web App name (found in your screenshot)
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
