@@ -43,9 +43,16 @@ jobs:
             VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
             VITE_SUPABASE_PROJECT_ID=${{ secrets.VITE_SUPABASE_PROJECT_ID }}
 
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_97033D0873224A139B78B461AC75E043 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_56AD104E38094E8BB5F1B4B8229A45D4 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F3C7A6FB528748EB9BBC4B542FBED0D7 }}
+
       - name: Deploy to Azure Web App
+        id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name:        ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           images:          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
