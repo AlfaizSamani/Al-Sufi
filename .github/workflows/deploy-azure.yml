@@ -12,7 +12,6 @@ jobs:
   deploy:
     name: Build & Deploy to Azure
     runs-on: ubuntu-latest
-    environment: production
     permissions:
       contents: read
       packages: write
