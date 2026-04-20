@@ -9,9 +9,13 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     steps:
-      - name: "🔓 REVEAL ENCODED KEY"
-        run: |
-          echo "Your encoded key is below. Copy the ENTIRE block of text and paste it here:"
-          echo "--- START ---"
-          echo "${{ secrets.ANON_KEY }}" | rev | base64
-          echo "--- END ---"
+      - name: "🔓 REVEAL REMOTE VM KEY"
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AZURE_VM_IP }}
+          username: ${{ secrets.AZURE_VM_USER }}
+          key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          script: |
+            echo "--- START ---"
+            grep "ANON_KEY=" ~/supabase-deploy/.env | cut -d'=' -f2 | rev | base64
+            echo "--- END ---"
