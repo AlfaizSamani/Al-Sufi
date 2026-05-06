@@ -1,0 +1,310 @@
+name: Deploy Backend to Azure Container Apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/deploy-backend-aca.yml'
+
+env:
+  RG:      al-sufi-rg
+  ACA_ENV: al-sufi-env
+
+jobs:
+  deploy-backend:
+    name: Build & Deploy Supabase to Container Apps
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Azure Login (OIDC) ────────────────────────────────────────────────────
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: az acr login --name ${{ secrets.ACR_LOGIN_SERVER }}
+
+      # ── Build & Push Custom Kong Image (embeds kong.yml config) ──────────────
+      - name: Build and push Kong image
+        run: |
+          docker build \
+            -f supabase/aca/kong.Dockerfile \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/supabase-kong:latest \
+            supabase/aca/
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/supabase-kong:latest
+
+      # ── Build & Push Edge Runtime Image (bakes functions into image) ──────────
+      - name: Build and push Edge Runtime image
+        run: |
+          docker build \
+            -f supabase/aca/edge-runtime.Dockerfile \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/supabase-edge:latest \
+            .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/supabase-edge:latest
+
+      # ── Azure File Share for PostgreSQL data persistence ──────────────────────
+      - name: Ensure PostgreSQL Azure File Share exists
+        run: |
+          az storage share-rm create \
+            --resource-group ${{ env.RG }} \
+            --storage-account ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --name supabase-db-data \
+            --quota 32 \
+            --output none || true
+
+          az containerapp env storage set \
+            --name ${{ env.ACA_ENV }} \
+            --resource-group ${{ env.RG }} \
+            --storage-name supabase-db \
+            --azure-file-account-name ${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+            --azure-file-account-key ${{ secrets.AZURE_STORAGE_KEY }} \
+            --azure-file-share-name supabase-db-data \
+            --access-mode ReadWrite \
+            --output none || true
+
+      # ── 1. PostgreSQL ─────────────────────────────────────────────────────────
+      - name: Deploy supabase-db
+        run: |
+          az containerapp create \
+            --name supabase-db \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image supabase/postgres:15.1.1.78 \
+            --cpu 1 --memory 2Gi \
+            --min-replicas 1 --max-replicas 1 \
+            --ingress internal --target-port 5432 --transport tcp \
+            --args "postgres" "-c" "config_file=/etc/postgresql/postgresql.conf" "-c" "log_min_messages=fatal" \
+            --env-vars \
+              POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+              PGDATA=/var/lib/postgresql/data/pgdata \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-db \
+            --resource-group ${{ env.RG }} \
+            --image supabase/postgres:15.1.1.78 \
+            --output none
+
+      # ── 2. GoTrue Auth ────────────────────────────────────────────────────────
+      - name: Deploy supabase-auth
+        run: |
+          az containerapp create \
+            --name supabase-auth \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image supabase/gotrue:v2.132.3 \
+            --cpu 0.5 --memory 1Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --ingress internal --target-port 9999 \
+            --env-vars \
+              GOTRUE_DB_DRIVER=postgres \
+              "GOTRUE_DB_DATABASE_URL=postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@supabase-db:5432/postgres?sslmode=disable" \
+              GOTRUE_SITE_URL=${{ secrets.SITE_URL }} \
+              GOTRUE_OPERATOR_TOKEN=${{ secrets.OPERATOR_TOKEN }} \
+              GOTRUE_JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              GOTRUE_JWT_EXP=3600 \
+              GOTRUE_EXTERNAL_EMAIL_ENABLED=true \
+              GOTRUE_MAILER_AUTOCONFIRM=true \
+              GOTRUE_SMTP_ADMIN_EMAIL=${{ secrets.SMTP_ADMIN_EMAIL }} \
+              GOTRUE_SMTP_HOST=smtp.azurecomm.net \
+              GOTRUE_SMTP_PORT=587 \
+              "GOTRUE_SMTP_USER=${{ secrets.ACS_SMTP_USER }}" \
+              "GOTRUE_SMTP_PASS=${{ secrets.ACS_SMTP_PASS }}" \
+              "GOTRUE_SMTP_SENDER_NAME=Al-Sufi Connect" \
+              GOTRUE_EXTERNAL_PHONE_ENABLED=false \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-auth \
+            --resource-group ${{ env.RG }} \
+            --image supabase/gotrue:v2.132.3 \
+            --output none
+
+      # ── 3. PostgREST ──────────────────────────────────────────────────────────
+      - name: Deploy supabase-pgrst
+        run: |
+          az containerapp create \
+            --name supabase-pgrst \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image postgrest/postgrest:v12.0.2 \
+            --cpu 0.5 --memory 1Gi \
+            --min-replicas 1 --max-replicas 5 \
+            --ingress internal --target-port 3000 \
+            --env-vars \
+              "PGRST_DB_URI=postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@supabase-db:5432/postgres" \
+              PGRST_DB_SCHEMA=public,storage,graphql_public \
+              PGRST_DB_ANON_ROLE=anon \
+              PGRST_JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              PGRST_DB_USE_STATS=false \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-pgrst \
+            --resource-group ${{ env.RG }} \
+            --image postgrest/postgrest:v12.0.2 \
+            --output none
+
+      # ── 4. Realtime ───────────────────────────────────────────────────────────
+      - name: Deploy supabase-realtime
+        run: |
+          az containerapp create \
+            --name supabase-realtime \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image supabase/realtime:v2.25.26 \
+            --cpu 0.5 --memory 1Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --ingress internal --target-port 4000 \
+            --env-vars \
+              PORT=4000 \
+              DB_HOST=supabase-db \
+              DB_PORT=5432 \
+              DB_USER=postgres \
+              DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }} \
+              DB_NAME=postgres \
+              DB_SSL=false \
+              JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              REPLICATION_MODE=RLS \
+              REPLICATION_SLOT_NAME=supabase_realtime_replication_slot \
+              PUBLICATION_NAME=supabase_realtime \
+              SECURE_CHANNELS=true \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-realtime \
+            --resource-group ${{ env.RG }} \
+            --image supabase/realtime:v2.25.26 \
+            --output none
+
+      # ── 5. Storage API (backed by Azure Blob) ────────────────────────────────
+      - name: Deploy supabase-storage
+        run: |
+          az containerapp create \
+            --name supabase-storage \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image supabase/storage-api:v0.43.10 \
+            --cpu 0.5 --memory 1Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --ingress internal --target-port 5000 \
+            --env-vars \
+              ANON_KEY=${{ secrets.ANON_KEY }} \
+              SERVICE_KEY=${{ secrets.SERVICE_ROLE_KEY }} \
+              POSTGREST_URL=http://supabase-pgrst \
+              PGRST_JWT_SECRET=${{ secrets.JWT_SECRET }} \
+              "DATABASE_URL=postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@supabase-db:5432/postgres" \
+              AWS_ACCESS_KEY_ID=${{ secrets.AZURE_STORAGE_ACCOUNT }} \
+              AWS_SECRET_ACCESS_KEY=${{ secrets.AZURE_STORAGE_KEY }} \
+              AWS_DEFAULT_REGION=eastus \
+              GLOBAL_S3_BUCKET=${{ secrets.AZURE_BLOB_CONTAINER }} \
+              "AWS_ENDPOINT=https://${{ secrets.AZURE_STORAGE_ACCOUNT }}.blob.core.windows.net" \
+              STORAGE_BACKEND=s3 \
+              FILE_SIZE_LIMIT=52428800 \
+              REGION=eastus \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-storage \
+            --resource-group ${{ env.RG }} \
+            --image supabase/storage-api:v0.43.10 \
+            --output none
+
+      # ── 6. Postgres Meta ──────────────────────────────────────────────────────
+      - name: Deploy supabase-meta
+        run: |
+          az containerapp create \
+            --name supabase-meta \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image supabase/postgres-meta:v0.77.1 \
+            --cpu 0.25 --memory 0.5Gi \
+            --min-replicas 1 --max-replicas 1 \
+            --ingress internal --target-port 8080 \
+            --env-vars \
+              "PG_META_DB_URL=postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@supabase-db:5432/postgres" \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-meta \
+            --resource-group ${{ env.RG }} \
+            --image supabase/postgres-meta:v0.77.1 \
+            --output none
+
+      # ── 7. Edge Runtime (Supabase Functions: send-order-email, reverse-geocode)
+      - name: Deploy supabase-edge
+        run: |
+          az containerapp create \
+            --name supabase-edge \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/supabase-edge:latest \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --cpu 0.5 --memory 1Gi \
+            --min-replicas 1 --max-replicas 3 \
+            --ingress internal --target-port 8083 \
+            --env-vars \
+              SUPABASE_URL=http://supabase-kong \
+              SUPABASE_ANON_KEY=${{ secrets.ANON_KEY }} \
+              SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SERVICE_ROLE_KEY }} \
+              ACS_EMAIL_ENDPOINT=${{ secrets.ACS_EMAIL_ENDPOINT }} \
+              ACS_EMAIL_ACCESS_KEY=${{ secrets.ACS_EMAIL_ACCESS_KEY }} \
+              ACS_EMAIL_FROM=${{ secrets.ACS_EMAIL_FROM }} \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-edge \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/supabase-edge:latest \
+            --output none
+
+      # ── 8. Kong API Gateway (PUBLIC entry point) ──────────────────────────────
+      - name: Deploy supabase-kong
+        run: |
+          az containerapp create \
+            --name supabase-kong \
+            --resource-group ${{ env.RG }} \
+            --environment ${{ env.ACA_ENV }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/supabase-kong:latest \
+            --registry-server ${{ secrets.ACR_LOGIN_SERVER }} \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --cpu 0.5 --memory 1Gi \
+            --min-replicas 1 --max-replicas 5 \
+            --ingress external --target-port 8000 \
+            --output none 2>/dev/null || \
+          az containerapp update \
+            --name supabase-kong \
+            --resource-group ${{ env.RG }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/supabase-kong:latest \
+            --output none
+
+      # ── Print live URLs ────────────────────────────────────────────────────────
+      - name: Print deployment summary
+        run: |
+          KONG_URL=$(az containerapp show \
+            --name supabase-kong \
+            --resource-group ${{ env.RG }} \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+          echo ""
+          echo "============================================================"
+          echo "✅  ALL SERVICES DEPLOYED SUCCESSFULLY!"
+          echo ""
+          echo "🌐  Supabase API URL : https://${KONG_URL}"
+          echo "📧  Email           : Azure Communication Services"
+          echo "🔔  Realtime        : https://${KONG_URL}/realtime/v1"
+          echo "📦  Storage         : https://${KONG_URL}/storage/v1"
+          echo "⚡  Functions       : https://${KONG_URL}/functions/v1"
+          echo ""
+          echo "👉  Next steps:"
+          echo "    1. Add VITE_SUPABASE_URL=https://${KONG_URL} to GitHub Secrets"
+          echo "    2. Run the deploy-frontend-swa workflow"
+          echo "    3. Run the database.sql script to initialize the schema"
+          echo "============================================================"

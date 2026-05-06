@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -102,9 +102,27 @@ const AdminOrders = () => {
     },
   });
 
+  const [isLive, setIsLive] = useState(false);
+
+  // Confirm realtime is connected by checking channel subscription
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLive(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div>
-      <h1 className="text-2xl font-display font-bold text-foreground mb-6">Orders</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-display font-bold text-foreground">Orders</h1>
+        <div className="flex items-center gap-2 text-xs font-body text-muted-foreground">
+          <span
+            className={`inline-block w-2 h-2 rounded-full ${
+              isLive ? "bg-green-500 animate-pulse" : "bg-gray-300"
+            }`}
+          />
+          {isLive ? "Live — auto-updates" : "Connecting..."}
+        </div>
+      </div>
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>

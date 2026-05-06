@@ -35,6 +35,34 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
+-- ── USER ROLES ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.user_roles (
+  id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role    app_role NOT NULL,
+  UNIQUE (user_id, role)
+);
+
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+-- Security definer function (avoids RLS recursion)
+CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role = _role
+  )
+$$;
+
+DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Admins can manage roles"  ON public.user_roles;
+
+CREATE POLICY "Users can view own roles" ON public.user_roles FOR SELECT TO authenticated USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage roles"  ON public.user_roles FOR ALL    TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+
+
 -- ── CATEGORIES ────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.categories (
   id          TEXT PRIMARY KEY,
@@ -132,33 +160,6 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- ── USER ROLES ────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS public.user_roles (
-  id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  role    app_role NOT NULL,
-  UNIQUE (user_id, role)
-);
-
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-
--- Security definer function (avoids RLS recursion)
-CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
-RETURNS BOOLEAN
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = _user_id AND role = _role
-  )
-$$;
-
-DROP POLICY IF EXISTS "Users can view own roles" ON public.user_roles;
-DROP POLICY IF EXISTS "Admins can manage roles"  ON public.user_roles;
-
-CREATE POLICY "Users can view own roles" ON public.user_roles FOR SELECT TO authenticated USING (auth.uid() = user_id);
-CREATE POLICY "Admins can manage roles"  ON public.user_roles FOR ALL    TO authenticated USING (public.has_role(auth.uid(), 'admin'));
 
 -- ── ADDRESSES ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.addresses (

@@ -1,0 +1,46 @@
+_format_version: "1.1"
+
+# In Azure Container Apps, services within the same environment
+# communicate using the Container App name as the hostname.
+# Azure routes port 80 internally to the container's target port.
+
+services:
+  - name: auth
+    url: http://supabase-auth
+    routes:
+      - name: auth
+        paths:
+          - /auth/v1
+        strip_path: true
+
+  - name: rest
+    url: http://supabase-pgrst
+    routes:
+      - name: rest
+        paths:
+          - /rest/v1
+        strip_path: true
+
+  - name: realtime
+    url: http://supabase-realtime
+    routes:
+      - name: realtime
+        paths:
+          - /realtime/v1
+        strip_path: true
+
+  - name: storage
+    url: http://supabase-storage
+    routes:
+      - name: storage
+        paths:
+          - /storage/v1
+        strip_path: true
+
+  - name: functions
+    url: http://supabase-edge
+    routes:
+      - name: functions
+        paths:
+          - /functions/v1
+        strip_path: true

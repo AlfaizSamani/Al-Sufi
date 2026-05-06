@@ -31,15 +31,13 @@ services:
       - pgrst
     environment:
       KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DECLARATIVE_CONFIG_STRING: ${KONG_CONFIG}
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ERROR_LOG: /dev/stderr
       KONG_PROXY_LISTEN: 0.0.0.0:8000
     ports:
       - ${KONG_HTTP_PORT}:8000
       - ${KONG_HTTPS_PORT}:8443
-    volumes:
-      - ./volumes/api/kong.yml:/var/lib/kong/kong.yml:ro
 
   auth:
     container_name: supabase-auth
