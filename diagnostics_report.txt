@@ -1,6 +1,6 @@
 ==========================================================
 🔍 AL-SUFI AZURE & SECRETS DIAGNOSTICS REPORT
-Generated at: Mon Jun 15 12:27:48 UTC 2026
+Generated at: Mon Jun 15 12:29:32 UTC 2026
 ==========================================================
 
 === GITHUB SECRETS STATUS ===
@@ -36,40 +36,6 @@ Generated at: Mon Jun 15 12:27:48 UTC 2026
 
 ❌ Primary AZURE_CLIENT_ID Login FAILED or Skipped
 
-=== LEGACY SP 1 LOGIN SUCCESS ===
---- Account Info ---
-EnvironmentName    HomeTenantId                          IsDefault    Name                            State    TenantId
------------------  ------------------------------------  -----------  ------------------------------  -------  ------------------------------------
-AzureCloud         36e99363-dc48-488d-91d0-19b3fa0c86d7  True         Microsoft Azure Sponsorship-6k  Enabled  36e99363-dc48-488d-91d0-19b3fa0c86d7
---- Resource Groups ---
+❌ Legacy SP 1 Login FAILED or Skipped
 
---- All Resources ---
-Name    ResourceGroup
-------  ---------------
-tesst   tesst_group
---- Attempting to Register Providers (May fail) ---
-ERROR: (AuthorizationFailed) The client '5b2e281e-015d-4598-afec-bebdb26e739c' with object id 'cbd690ec-9f0f-4531-a6ee-8767ad425ee1' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
-Code: AuthorizationFailed
-Message: The client '5b2e281e-015d-4598-afec-bebdb26e739c' with object id 'cbd690ec-9f0f-4531-a6ee-8767ad425ee1' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
-ERROR: (AuthorizationFailed) The client '5b2e281e-015d-4598-afec-bebdb26e739c' with object id 'cbd690ec-9f0f-4531-a6ee-8767ad425ee1' does not have authorization to perform action 'Microsoft.OperationalInsights/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
-Code: AuthorizationFailed
-Message: The client '5b2e281e-015d-4598-afec-bebdb26e739c' with object id 'cbd690ec-9f0f-4531-a6ee-8767ad425ee1' does not have authorization to perform action 'Microsoft.OperationalInsights/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
-
-=== LEGACY SP 2 LOGIN SUCCESS ===
---- Account Info ---
-EnvironmentName    HomeTenantId                          IsDefault    Name                            State    TenantId
------------------  ------------------------------------  -----------  ------------------------------  -------  ------------------------------------
-AzureCloud         36e99363-dc48-488d-91d0-19b3fa0c86d7  True         Microsoft Azure Sponsorship-6k  Enabled  36e99363-dc48-488d-91d0-19b3fa0c86d7
---- Resource Groups ---
-
---- All Resources ---
-Name    ResourceGroup
-------  ---------------
-tesst   tesst_group
---- Attempting to Register Providers (May fail) ---
-ERROR: (AuthorizationFailed) The client '537dbe1c-f7a7-4320-8da9-af0f4514243b' with object id 'bf7bf00f-b32b-40ac-a534-81f44f184b64' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
-Code: AuthorizationFailed
-Message: The client '537dbe1c-f7a7-4320-8da9-af0f4514243b' with object id 'bf7bf00f-b32b-40ac-a534-81f44f184b64' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
-ERROR: (AuthorizationFailed) The client '537dbe1c-f7a7-4320-8da9-af0f4514243b' with object id 'bf7bf00f-b32b-40ac-a534-81f44f184b64' does not have authorization to perform action 'Microsoft.OperationalInsights/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
-Code: AuthorizationFailed
-Message: The client '537dbe1c-f7a7-4320-8da9-af0f4514243b' with object id 'bf7bf00f-b32b-40ac-a534-81f44f184b64' does not have authorization to perform action 'Microsoft.OperationalInsights/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
+❌ Legacy SP 2 Login FAILED or Skipped
