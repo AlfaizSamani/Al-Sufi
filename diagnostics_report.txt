@@ -1,0 +1,59 @@
+==========================================================
+🔍 AL-SUFI AZURE & SECRETS DIAGNOSTICS REPORT
+Generated at: Mon Jun 15 12:26:42 UTC 2026
+==========================================================
+
+=== GITHUB SECRETS STATUS ===
+❌ AZURE_CLIENT_ID is MISSING
+❌ AZURE_TENANT_ID is MISSING
+❌ AZURE_SUBSCRIPTION_ID is MISSING
+❌ ACR_LOGIN_SERVER is MISSING
+❌ ACR_USERNAME is MISSING
+❌ ACR_PASSWORD is MISSING
+❌ AZURE_STORAGE_ACCOUNT is MISSING
+❌ AZURE_STORAGE_KEY is MISSING
+❌ AZURE_BLOB_CONTAINER is MISSING
+✓ POSTGRES_PASSWORD is SET (length: 24)
+❌ SITE_URL is MISSING
+✓ OPERATOR_TOKEN is SET (length: 40)
+✓ JWT_SECRET is SET (length: 44)
+✓ ANON_KEY is SET (length: 180)
+✓ SERVICE_ROLE_KEY is SET (length: 190)
+❌ SMTP_ADMIN_EMAIL is MISSING
+❌ ACS_SMTP_USER is MISSING
+❌ ACS_SMTP_PASS is MISSING
+❌ ACS_EMAIL_ENDPOINT is MISSING
+❌ ACS_EMAIL_ACCESS_KEY is MISSING
+❌ ACS_EMAIL_FROM is MISSING
+✓ VITE_SUPABASE_URL is SET (length: 28)
+✓ VITE_SUPABASE_PUBLISHABLE_KEY is SET (length: 179)
+✓ VITE_SUPABASE_PROJECT_ID is SET (length: 13)
+❌ AZURE_STATIC_WEB_APPS_API_TOKEN is MISSING
+
+=== LEGACY/APP-SERVICE SECRETS ===
+✓ AZUREAPPSERVICE_CLIENTID_9703... is SET (length: 36)
+✓ AZUREAPPSERVICE_CLIENTID_9804... is SET (length: 36)
+
+❌ Primary AZURE_CLIENT_ID Login FAILED or Skipped
+
+=== LEGACY SP 1 LOGIN SUCCESS ===
+--- Account Info ---
+EnvironmentName    HomeTenantId                          IsDefault    Name                            State    TenantId
+-----------------  ------------------------------------  -----------  ------------------------------  -------  ------------------------------------
+AzureCloud         36e99363-dc48-488d-91d0-19b3fa0c86d7  True         Microsoft Azure Sponsorship-6k  Enabled  36e99363-dc48-488d-91d0-19b3fa0c86d7
+--- Registering Resource Providers ---
+Registering Microsoft.App...
+ERROR: (AuthorizationFailed) The client '5b2e281e-015d-4598-afec-bebdb26e739c' with object id 'cbd690ec-9f0f-4531-a6ee-8767ad425ee1' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
+Code: AuthorizationFailed
+Message: The client '5b2e281e-015d-4598-afec-bebdb26e739c' with object id 'cbd690ec-9f0f-4531-a6ee-8767ad425ee1' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
+
+=== LEGACY SP 2 LOGIN SUCCESS ===
+--- Account Info ---
+EnvironmentName    HomeTenantId                          IsDefault    Name                            State    TenantId
+-----------------  ------------------------------------  -----------  ------------------------------  -------  ------------------------------------
+AzureCloud         36e99363-dc48-488d-91d0-19b3fa0c86d7  True         Microsoft Azure Sponsorship-6k  Enabled  36e99363-dc48-488d-91d0-19b3fa0c86d7
+--- Registering Resource Providers ---
+Registering Microsoft.App...
+ERROR: (AuthorizationFailed) The client '537dbe1c-f7a7-4320-8da9-af0f4514243b' with object id 'bf7bf00f-b32b-40ac-a534-81f44f184b64' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
+Code: AuthorizationFailed
+Message: The client '537dbe1c-f7a7-4320-8da9-af0f4514243b' with object id 'bf7bf00f-b32b-40ac-a534-81f44f184b64' does not have authorization to perform action 'Microsoft.App/register/action' over scope '/subscriptions/cc98b134-3961-4f4c-bd47-9999b3341dfd' or the scope is invalid. If access was recently granted, please refresh your credentials.
